@@ -1,0 +1,108 @@
+<script setup lang="ts">
+import type { Review, ReviewItemWithMedia, ReviewWithItems } from '~/server/types/db'
+
+definePageMeta({ layout: 'default' })
+
+function normalizeItem(item: Partial<ReviewItemWithMedia>): ReviewItemWithMedia {
+  return {
+    ...item,
+    tags: Array.isArray(item.tags) ? item.tags : [],
+    screenshots: Array.isArray(item.screenshots) ? item.screenshots : [],
+  } as ReviewItemWithMedia
+}
+
+function normalizeReview(review: ReviewWithItems): ReviewWithItems {
+  return {
+    ...review,
+    items: Array.isArray(review.items) ? review.items.map(normalizeItem) : [],
+  }
+}
+
+const { data: completed } = await useAsyncData<ReviewWithItems[]>(
+  'completed-reviews',
+  async () => {
+    const reviews = await $fetch<Review[]>('/api/reviews')
+    const completedReviews = reviews
+      .filter(r => r.status === 'completed')
+      .sort((a, b) => (b.completed_at ?? 0) - (a.completed_at ?? 0))
+
+    return Promise.all(
+      completedReviews.map(async (review) => {
+        const detail = await $fetch<ReviewWithItems>(`/api/reviews/${review.id}`)
+        return normalizeReview(detail)
+      }),
+    )
+  },
+  {
+    default: () => [],
+  },
+)
+
+const sortedCompleted = computed(() =>
+  completed.value
+    .filter(r => r.status === 'completed')
+    .sort((a, b) => (b.completed_at ?? 0) - (a.completed_at ?? 0))
+)
+
+const activeFilter = ref<string | null>(null)
+
+const teams = computed(() => {
+  const t = new Set(sortedCompleted.value.map(r => r.team).filter(Boolean))
+  return [...t]
+})
+
+const filtered = computed(() =>
+  activeFilter.value
+    ? sortedCompleted.value.filter(r => r.team === activeFilter.value)
+    : sortedCompleted.value
+)
+</script>
+
+<template>
+  <div class="archive">
+    <div class="archive-head">
+      <h1>Archive</h1>
+      <p>All completed sprint reviews.</p>
+    </div>
+
+    <div v-if="!sortedCompleted.length" class="empty-state">
+      <svg width="48" height="48" viewBox="0 0 48 48" fill="none" style="color:var(--fg-disabled)">
+        <rect x="8" y="12" width="32" height="28" rx="4" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M16 24h16M16 30h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <h3>No completed reviews</h3>
+      <p>Complete a sprint review to see it here.</p>
+      <NuxtLink to="/" class="rm-btn rm-btn-primary">Go to planning</NuxtLink>
+    </div>
+
+    <template v-else>
+      <ArchiveStats :reviews="sortedCompleted" />
+
+      <div v-if="teams.length > 1" class="archive-filters" style="margin-bottom:20px;">
+        <button
+          class="filter-pill"
+          :class="{ on: activeFilter === null }"
+          @click="activeFilter = null"
+        >All teams</button>
+        <button
+          v-for="team in teams"
+          :key="team"
+          class="filter-pill"
+          :class="{ on: activeFilter === team }"
+          @click="activeFilter = activeFilter === team ? null : team"
+        >{{ team }}</button>
+      </div>
+
+      <div class="archive-grid">
+        <NuxtLink
+          v-for="(review, i) in filtered"
+          :key="review.id"
+          :to="`/archive/${review.id}`"
+          style="text-decoration:none;"
+        >
+          <SprintCard :review="review" :featured="i === 0 && activeFilter === null" />
+        </NuxtLink>
+      </div>
+    </template>
+  </div>
+</template>
