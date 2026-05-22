@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import type { ReviewItemWithMedia } from '~/server/types/db'
+import type { PresentationSlide } from '~/utils/presenterSlides'
 
 const props = defineProps<{
-  agenda: ReviewItemWithMedia[]
+  slides: PresentationSlide[]
   currentIndex: number
   visible: boolean
 }>()
@@ -14,8 +14,8 @@ const emit = defineEmits<{ select: [index: number] }>()
   <Transition name="peek">
     <div v-if="visible" class="present-peek">
       <button
-        v-for="(item, i) in agenda"
-        :key="item.id"
+        v-for="(slide, i) in slides"
+        :key="slide.id"
         class="present-peek-item"
         :class="{ now: i === currentIndex, done: i < currentIndex }"
         @click="emit('select', i)"
@@ -26,7 +26,37 @@ const emit = defineEmits<{ select: [index: number] }>()
           <path d="M2 5.5l2.5 2.5 3.5-5" stroke="var(--mint-50)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
         <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-          {{ item.issue_id }}
+          {{ slide.kind === 'cover' ? 'Cover' : slide.kind === 'agenda' ? 'Agenda' : slide.kind === 'end' ? 'Review' : slide.item?.issue_id }}
+        </span>
+        <span
+          v-if="slide.kind === 'cover'"
+          style="font-family:var(--font-mono);font-size:10px;color:var(--fg-disabled);"
+        >
+          Start
+        </span>
+        <span
+          v-else-if="slide.kind === 'agenda'"
+          style="font-family:var(--font-mono);font-size:10px;color:var(--fg-disabled);"
+        >
+          Liste
+        </span>
+        <span
+          v-else-if="slide.kind === 'end'"
+          style="font-family:var(--font-mono);font-size:10px;color:var(--fg-disabled);"
+        >
+          Ende
+        </span>
+        <span
+          v-else-if="slide.kind === 'intro'"
+          style="font-family:var(--font-mono);font-size:10px;color:var(--fg-disabled);"
+        >
+          Intro
+        </span>
+        <span
+          v-else-if="slide.screenshotCount > 1"
+          style="font-family:var(--font-mono);font-size:10px;color:var(--fg-disabled);"
+        >
+          {{ (slide.screenshotIndex ?? 0) + 1 }}/{{ slide.screenshotCount }}
         </span>
       </button>
     </div>

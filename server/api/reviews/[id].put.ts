@@ -1,7 +1,14 @@
 
 import type { Review } from '../../types/db'
 
-const STATUS_ORDER = { planned: 0, active: 1, completed: 2 }
+const STATUS_ORDER = { planned: 0, plan_finished: 1, active: 2, completed: 3 }
+const VALID_STATUSES = Object.keys(STATUS_ORDER)
+const ALLOWED_TRANSITIONS: Record<Review['status'], Review['status'][]> = {
+  planned: ['planned', 'plan_finished'],
+  plan_finished: ['plan_finished', 'active'],
+  active: ['active', 'plan_finished', 'completed'],
+  completed: ['completed'],
+}
 
 export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id')!
@@ -19,19 +26,29 @@ export default defineEventHandler(async (event) => {
 
   if (body.status !== undefined) {
     const newStatus = body.status as string
-    if (!['planned', 'active', 'completed'].includes(newStatus)) {
+    if (!VALID_STATUSES.includes(newStatus)) {
       throw createError({ statusCode: 400, message: 'Invalid status value' })
     }
-    if (STATUS_ORDER[newStatus as keyof typeof STATUS_ORDER] < STATUS_ORDER[review.status]) {
-      throw createError({ statusCode: 409, message: 'Backward status transitions are not allowed' })
+    if (review.status === 'completed' && newStatus !== 'completed') {
+      throw createError({ statusCode: 409, message: 'Completed reviews cannot be changed' })
+    }
+    const isAbortingActiveReview = review.status === 'active' && newStatus === 'plan_finished'
+    if (!ALLOWED_TRANSITIONS[review.status].includes(newStatus as Review['status'])) {
+      const order = STATUS_ORDER[newStatus as keyof typeof STATUS_ORDER] < STATUS_ORDER[review.status] ? 'Backward ' : ''
+      throw createError({ statusCode: 409, message: `${order}status transition is not allowed` })
     }
     updates.status = newStatus
-    if (newStatus === 'active' && review.status === 'planned') {
-      updates.started_at = Date.now()
+    if (isAbortingActiveReview) {
+      updates.started_at = null
+      updates.duration_ms = null
+    }
+    const now = Date.now()
+    if (newStatus === 'active' && review.status === 'plan_finished') {
+      updates.started_at = now
     }
     if (newStatus === 'completed' && review.status === 'active') {
-      updates.completed_at = Date.now()
-      updates.duration_ms = review.started_at ? Date.now() - review.started_at : null
+      updates.completed_at = now
+      updates.duration_ms = review.started_at ? now - review.started_at : null
     }
   }
 

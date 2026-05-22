@@ -10,7 +10,7 @@ export default defineEventHandler(async (event) => {
 
   const review = db.prepare('SELECT * FROM reviews WHERE id = ?').get(reviewId) as Review | undefined
   if (!review) throw createError({ statusCode: 404, message: 'Review not found' })
-  if (review.status !== 'planned') {
+  if (review.status !== 'planned' && review.status !== 'plan_finished') {
     throw createError({ statusCode: 409, message: 'Items can only be added to planned reviews' })
   }
 

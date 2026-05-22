@@ -19,11 +19,11 @@ async function submit() {
   loading.value = true
   error.value = ''
   try {
-    await $fetch('/api/reviews', {
+    const review = await $fetch<{ id: string }>('/api/reviews', {
       method: 'POST',
       body: { name: name.value, sprint: sprint.value, team: team.value },
     })
-    await router.push('/')
+    await router.push({ path: '/', query: { review: review.id } })
   } catch (e: any) {
     error.value = e?.data?.message ?? 'Failed to create review'
   } finally {

@@ -11,7 +11,10 @@ test.describe('US3 – Archive', () => {
       data: { issue_id: 'T-10', title: 'Shipped Feature', presenter: 'Carol', item_status: 'done', tags: [] },
     })
 
-    // Transition to active then completed
+    // Transition to ready, active, then completed
+    await page.request.put(`/api/reviews/${review.id}`, {
+      data: { status: 'plan_finished' },
+    })
     await page.request.put(`/api/reviews/${review.id}`, {
       data: { status: 'active' },
     })

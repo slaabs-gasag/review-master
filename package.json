@@ -17,7 +17,6 @@
     "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
-    "@nuxt/content": "^3.14.0",
     "@nuxt/hints": "^1.1.2",
     "@nuxt/image": "^2.0.0",
     "@nuxt/test-utils": "^4.0.3",

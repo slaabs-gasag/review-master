@@ -4,7 +4,7 @@ export interface Review {
   sprint: string
   team: string
   description: string
-  status: 'planned' | 'active' | 'completed'
+  status: 'planned' | 'plan_finished' | 'active' | 'completed'
   created_at: number
   started_at: number | null
   completed_at: number | null

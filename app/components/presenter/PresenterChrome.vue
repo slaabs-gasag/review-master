@@ -2,7 +2,9 @@
 import type { ReviewItemWithMedia } from '~/server/types/db'
 
 const props = defineProps<{
-  item: ReviewItemWithMedia
+  item?: ReviewItemWithMedia
+  title?: string
+  label?: string
   index: number
   total: number
   elapsed: number
@@ -19,6 +21,8 @@ const emit = defineEmits<{
 
 const isFirst = computed(() => props.index === 0)
 const isLast = computed(() => props.index === props.total - 1)
+const chromeTitle = computed(() => props.item?.title || props.item?.issue_id || props.title || 'Sprint Review')
+const chromeLabel = computed(() => props.item?.issue_id || props.label || 'Review')
 
 const elapsedStr = computed(() => {
   const s = Math.floor(props.elapsed / 1000)
@@ -34,8 +38,8 @@ const elapsedStr = computed(() => {
     <div class="chrome-tl">
       <span v-if="!isArchive" class="livedot" />
       <span v-else class="chip chip-neutral" style="font-size:10px;padding:2px 8px;">archive</span>
-      <span class="issue">{{ item.issue_id }}</span>
-      <span class="title">{{ item.title || item.issue_id }}</span>
+      <span class="issue">{{ chromeLabel }}</span>
+      <span class="title">{{ chromeTitle }}</span>
     </div>
 
     <!-- TR: pips + counter + close -->
@@ -57,7 +61,7 @@ const elapsedStr = computed(() => {
     </div>
 
     <!-- BL: avatar + presenter name -->
-    <div class="chrome-bl">
+    <div v-if="item" class="chrome-bl">
       <AvatarGradient :name="item.presenter || '?'" size="md" />
       <div>
         <div class="presenter-name">{{ item.presenter || 'Unknown' }}</div>
@@ -69,7 +73,7 @@ const elapsedStr = computed(() => {
 
     <!-- BR: Q&A btn + nav + timer -->
     <div class="chrome-br">
-      <button class="rm-btn rm-btn-soft" style="font-size:var(--text-xs);" @click="emit('toggleQA')">
+      <button v-if="item" class="rm-btn rm-btn-soft" style="font-size:var(--text-xs);" @click="emit('toggleQA')">
         Q&A <span v-if="qaCount > 0" class="chip chip-cyan" style="font-size:10px;padding:1px 7px;margin-left:4px;">{{ qaCount }}</span>
       </button>
 

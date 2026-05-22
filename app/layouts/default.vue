@@ -10,7 +10,9 @@ const { data: reviews, refresh: refreshReviews } = await useFetch<Review[]>('/ap
 
 const isPlanActive = computed(() => !route.path.startsWith('/archive'))
 const isArchiveActive = computed(() => route.path.startsWith('/archive'))
-const plannedCount = computed(() => reviews.value.filter(r => r.status === 'planned').length)
+const plannedCount = computed(() => reviews.value.filter(r =>
+  r.status === 'planned' || r.status === 'plan_finished' || r.status === 'active'
+).length)
 const archivedCount = computed(() => reviews.value.filter(r => r.status === 'completed').length)
 
 watch(() => route.fullPath, () => {

@@ -27,8 +27,20 @@ onMounted(() => {
 })
 onUnmounted(() => { if (timer) clearInterval(timer) })
 
-const currentItem = computed(() => review.value?.items[currentIndex.value] ?? null)
-const isLast = computed(() => currentIndex.value === (review.value?.items.length ?? 1) - 1)
+const slides = computed(() => buildPresentationSlides(review.value))
+const currentSlide = computed(() => slides.value[currentIndex.value] ?? null)
+const currentItem = computed(() => currentSlide.value?.item ?? null)
+const isLast = computed(() => currentIndex.value === slides.value.length - 1)
+const chromeLabel = computed(() => {
+  if (currentSlide.value?.kind === 'cover') return 'Review'
+  if (currentSlide.value?.kind === 'agenda') return 'Agenda'
+  return undefined
+})
+const chromeTitle = computed(() => {
+  if (currentSlide.value?.kind === 'cover') return review.value?.name
+  if (currentSlide.value?.kind === 'agenda') return 'Agenda'
+  return undefined
+})
 
 const qaEnabled = computed(() => !!currentItem.value)
 const { data: qaEntries, refresh: refreshQA } = useFetch<QaEntry[]>(
@@ -51,8 +63,17 @@ function handleNext() {
   }
 }
 
-function handleExit() {
-  router.push('/')
+async function handleExit() {
+  try {
+    if (review.value?.status === 'active') {
+      await $fetch(`/api/reviews/${reviewId}`, {
+        method: 'PUT',
+        body: { status: 'plan_finished' },
+      })
+    }
+  } finally {
+    await router.push({ path: '/', query: { review: reviewId } })
+  }
 }
 
 async function handleComplete() {
@@ -83,18 +104,29 @@ async function deleteQA(id: string) {
 
 <template>
   <div class="present">
-    <div v-if="!review || !currentItem" style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--fg-disabled);">
+    <div v-if="!review || !currentSlide" style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--fg-disabled);">
       Loading…
     </div>
     <template v-else>
       <Transition name="slide" mode="out-in">
-        <PresenterSlide :key="currentItem.id" :item="currentItem" />
+        <PresenterSlide
+          :key="currentSlide.id"
+          :review="currentSlide.review"
+          :item="currentSlide.item"
+          :is-cover="currentSlide.kind === 'cover'"
+          :is-agenda="currentSlide.kind === 'agenda'"
+          :is-end="currentSlide.kind === 'end'"
+          :screenshot-index="currentSlide?.screenshotIndex"
+        />
       </Transition>
 
       <PresenterChrome
+        v-if="currentSlide.kind !== 'end'"
         :item="currentItem"
+        :label="chromeLabel"
+        :title="chromeTitle"
         :index="currentIndex"
-        :total="(review.items as any[]).length"
+        :total="slides.length"
         :elapsed="elapsed"
         :is-archive="false"
         :qa-count="qaEntries?.length ?? 0"
@@ -105,7 +137,7 @@ async function deleteQA(id: string) {
       />
 
       <PresenterPeek
-        :agenda="review.items"
+        :slides="slides"
         :current-index="currentIndex"
         :visible="showPeek"
         @select="(i) => { currentIndex = i; showPeek = false }"

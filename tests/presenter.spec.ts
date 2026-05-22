@@ -12,6 +12,12 @@ test.describe('US2 – Presenter Mode', () => {
     await page.request.post(`/api/reviews/${review.id}/items`, {
       data: { issue_id: 'T-2', title: 'Feature B', presenter: 'Bob', item_status: 'done', tags: [] },
     })
+    await page.request.put(`/api/reviews/${review.id}`, {
+      data: { status: 'plan_finished' },
+    })
+    await page.request.put(`/api/reviews/${review.id}`, {
+      data: { status: 'active' },
+    })
     return review
   }
 
@@ -21,10 +27,15 @@ test.describe('US2 – Presenter Mode', () => {
 
     await expect(page.locator('.present')).toBeVisible()
 
-    // First item visible
+    // Review starts with cover and agenda before item slides.
+    await expect(page.locator('.present')).toContainText('Present Test Review')
+    await page.keyboard.press('ArrowRight')
+    await expect(page.locator('.present')).toContainText('Agenda')
+
+    await page.keyboard.press('ArrowRight')
     await expect(page.locator('.present')).toContainText('T-1')
 
-    // ArrowRight → next item
+    // ArrowRight -> next item
     await page.keyboard.press('ArrowRight')
     await expect(page.locator('.present')).toContainText('T-2')
 
@@ -52,16 +63,19 @@ test.describe('US2 – Presenter Mode', () => {
     await goto(`/present/${review.id}`, { waitUntil: 'hydration' })
 
     await page.keyboard.press('Escape')
-    await page.waitForURL('/')
+    await page.waitForURL('**/?review=*')
   })
 
   test('end review on last slide completes and redirects to archive', async ({ page, goto }) => {
     const review = await createReviewWithItems(page)
     await goto(`/present/${review.id}`, { waitUntil: 'hydration' })
 
-    // Navigate to last item
+    // Navigate to the end slide.
     await page.keyboard.press('ArrowRight')
-    await expect(page.locator('.present')).toContainText('T-2')
+    await page.keyboard.press('ArrowRight')
+    await page.keyboard.press('ArrowRight')
+    await page.keyboard.press('ArrowRight')
+    await expect(page.locator('.present')).toContainText('Danke')
 
     // End review button should appear
     const endBtn = page.getByRole('button', { name: /end review/i })

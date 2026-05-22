@@ -48,7 +48,11 @@ test.describe('US1 – Plan a Sprint Review', () => {
 
     await goto('/', { waitUntil: 'hydration' })
 
-    // Should show our review (most recent → active)
+    // Should show our review as a draft first.
+    const finishBtn = page.getByRole('button', { name: /finish planning/i })
+    await expect(finishBtn).toBeVisible()
+    await finishBtn.click()
+
     const startBtn = page.getByRole('button', { name: /start review/i })
     await expect(startBtn).toBeVisible()
     await startBtn.click()
