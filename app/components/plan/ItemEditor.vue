@@ -10,6 +10,7 @@ const emit = defineEmits<{
 
 const fileInput = useTemplateRef<HTMLInputElement>('fileInput')
 
+const issueId = ref(props.item.issue_id)
 const title = ref(props.item.title)
 const presenter = ref(props.item.presenter)
 const description = ref(props.item.description)
@@ -20,6 +21,7 @@ const showTagInput = ref(false)
 const tagInput = useTemplateRef<HTMLInputElement>('tagInput')
 
 watch(() => props.item, (item) => {
+  issueId.value = item.issue_id
   title.value = item.title
   presenter.value = item.presenter
   description.value = item.description
@@ -29,6 +31,15 @@ watch(() => props.item, (item) => {
 
 function save(field: string, value: unknown) {
   emit('update', { [field]: value })
+}
+
+function saveIssueId() {
+  const nextIssueId = issueId.value.trim()
+  if (!nextIssueId) {
+    issueId.value = props.item.issue_id
+    return
+  }
+  save('issue_id', nextIssueId)
 }
 
 function saveStatus(s: 'done' | 'progress' | 'blocked') {
@@ -87,19 +98,37 @@ function showTagInputFn() {
     </div>
 
     <div class="plan-detail-body">
-      <!-- Presenter -->
-      <div class="field">
-        <div class="field-label">
-          <span class="eyebrow">Presenter</span>
+      <div class="field-row">
+        <!-- Ticket ID -->
+        <div class="field">
+          <div class="field-label">
+            <span class="eyebrow">Ticket ID</span>
+          </div>
+          <input
+            class="rm-input"
+            type="text"
+            :value="issueId"
+            placeholder="e.g. PROJ-123"
+            @input="issueId = ($event.target as HTMLInputElement).value"
+            @keydown.enter.prevent="($event.target as HTMLInputElement).blur()"
+            @blur="saveIssueId"
+          />
         </div>
-        <input
-          class="rm-input"
-          type="text"
-          :value="presenter"
-          placeholder="Full name..."
-          @input="presenter = ($event.target as HTMLInputElement).value"
-          @blur="save('presenter', presenter)"
-        />
+
+        <!-- Presenter -->
+        <div class="field">
+          <div class="field-label">
+            <span class="eyebrow">Presenter</span>
+          </div>
+          <input
+            class="rm-input"
+            type="text"
+            :value="presenter"
+            placeholder="Full name..."
+            @input="presenter = ($event.target as HTMLInputElement).value"
+            @blur="save('presenter', presenter)"
+          />
+        </div>
       </div>
 
       <!-- Screenshots -->

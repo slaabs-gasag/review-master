@@ -12,7 +12,11 @@ export default defineEventHandler(async (event) => {
   if (!item) throw createError({ statusCode: 404, message: 'Item not found' })
 
   const updates: Record<string, unknown> = {}
-  if (body.issue_id !== undefined) updates.issue_id = String(body.issue_id).trim()
+  if (body.issue_id !== undefined) {
+    const issueId = String(body.issue_id).trim()
+    if (!issueId) throw createError({ statusCode: 400, message: 'issue_id is required' })
+    updates.issue_id = issueId
+  }
   if (body.title !== undefined) updates.title = String(body.title).trim()
   if (body.presenter !== undefined) updates.presenter = String(body.presenter).trim()
   if (body.description !== undefined) updates.description = String(body.description)
