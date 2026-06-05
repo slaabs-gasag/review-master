@@ -56,6 +56,35 @@ const filtered = computed(() =>
     ? sortedCompleted.value.filter(r => r.team === activeFilter.value)
     : sortedCompleted.value
 )
+
+// Delete
+const deleteTarget = ref<ReviewWithItems | null>(null)
+const deleteOpen = ref(false)
+const deleteError = ref<string | null>(null)
+const deleteLoading = ref(false)
+
+function openDeleteModal(review: ReviewWithItems) {
+  deleteTarget.value = review
+  deleteError.value = null
+  deleteOpen.value = true
+}
+
+async function confirmDelete() {
+  if (!deleteTarget.value) return
+  deleteLoading.value = true
+  deleteError.value = null
+  try {
+    await $fetch(`/api/reviews/${deleteTarget.value.id}`, { method: 'DELETE' })
+    completed.value = (completed.value ?? []).filter(r => r.id !== deleteTarget.value!.id)
+    deleteOpen.value = false
+  }
+  catch {
+    deleteError.value = 'Deletion failed. Please try again.'
+  }
+  finally {
+    deleteLoading.value = false
+  }
+}
 </script>
 
 <template>
@@ -94,15 +123,29 @@ const filtered = computed(() =>
       </div>
 
       <div class="archive-grid">
-        <NuxtLink
+        <div
           v-for="(review, i) in filtered"
           :key="review.id"
-          :to="`/archive/${review.id}`"
-          style="text-decoration:none;"
+          class="archive-card-wrap"
         >
-          <SprintCard :review="review" :featured="i === 0 && activeFilter === null" />
-        </NuxtLink>
+          <NuxtLink :to="`/archive/${review.id}`" style="text-decoration:none;display:block;">
+            <SprintCard :review="review" :featured="i === 0 && activeFilter === null" />
+          </NuxtLink>
+          <button class="archive-delete-btn" title="Delete review" @click.stop="openDeleteModal(review)">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M2 3.5h10M5.5 3.5V2.5h3v1M6 6v4M8 6v4M3 3.5l.7 7.5h6.6l.7-7.5H3z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
       </div>
+
+      <DeleteReviewModal
+        v-model:open="deleteOpen"
+        :review-name="deleteTarget?.name"
+        :loading="deleteLoading"
+        :error="deleteError"
+        @confirm="confirmDelete"
+      />
     </template>
   </div>
 </template>

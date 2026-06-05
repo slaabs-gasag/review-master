@@ -15,6 +15,26 @@ const selectedId = ref<string | null>(review.value?.items[0]?.id ?? null)
 const selectedItem = computed<ReviewItemWithMedia | null>(() =>
   review.value?.items.find(i => i.id === selectedId.value) ?? null
 )
+
+// Delete
+const deleteOpen = ref(false)
+const deleteError = ref<string | null>(null)
+const deleteLoading = ref(false)
+
+async function confirmDelete() {
+  deleteLoading.value = true
+  deleteError.value = null
+  try {
+    await $fetch(`/api/reviews/${reviewId}`, { method: 'DELETE' })
+    await navigateTo('/archive')
+  }
+  catch {
+    deleteError.value = 'Deletion failed. Please try again.'
+  }
+  finally {
+    deleteLoading.value = false
+  }
+}
 </script>
 
 <template>
@@ -36,6 +56,7 @@ const selectedItem = computed<ReviewItemWithMedia | null>(() =>
         </div>
         <div class="plan-head-actions">
           <NuxtLink to="/archive" class="rm-btn rm-btn-ghost" style="font-size:var(--text-xs);">← Archive</NuxtLink>
+          <button class="rm-btn rm-btn-ghost" style="font-size:var(--text-xs);color:var(--fg-subtle);" @click="deleteOpen = true">Delete</button>
           <NuxtLink :to="`/archive/${reviewId}/present`" class="rm-btn rm-btn-primary" style="font-size:var(--text-xs);">Re-watch →</NuxtLink>
         </div>
       </div>
@@ -125,4 +146,12 @@ const selectedItem = computed<ReviewItemWithMedia | null>(() =>
       <p style="color:var(--fg-disabled);font-size:var(--text-sm);">Select an item to view</p>
     </div>
   </div>
+
+  <DeleteReviewModal
+    v-model:open="deleteOpen"
+    :review-name="review?.name"
+    :loading="deleteLoading"
+    :error="deleteError"
+    @confirm="confirmDelete"
+  />
 </template>
