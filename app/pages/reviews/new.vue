@@ -6,6 +6,7 @@ const router = useRouter()
 const name = ref('')
 const sprint = ref('')
 const team = ref('')
+const reviewDate = ref('')
 const loading = ref(false)
 const error = ref('')
 
@@ -21,7 +22,7 @@ async function submit() {
   try {
     const review = await $fetch<{ id: string }>('/api/reviews', {
       method: 'POST',
-      body: { name: name.value, sprint: sprint.value, team: team.value },
+      body: { name: name.value, sprint: sprint.value, team: team.value, review_date: reviewDate.value || undefined },
     })
     await router.push({ path: '/', query: { review: review.id } })
   } catch (e: any) {
@@ -78,6 +79,19 @@ async function submit() {
             type="text"
             placeholder="Workstream Studio"
             autocomplete="off"
+          />
+        </div>
+
+        <div class="field">
+          <label class="eyebrow" for="review-date">
+            Review date
+            <span style="color:var(--fg-disabled);font-weight:400;"> (optional)</span>
+          </label>
+          <input
+            id="review-date"
+            v-model="reviewDate"
+            class="rm-input rm-input-date"
+            type="date"
           />
         </div>
 

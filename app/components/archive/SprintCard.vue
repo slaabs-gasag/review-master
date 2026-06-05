@@ -73,7 +73,6 @@ const completedDate = computed(() => {
         </svg>
         <span>{{ duration ?? '—' }}</span>
       </div>
-      <span class="sprint-watch">Re-watch →</span>
     </div>
   </div>
 </template>

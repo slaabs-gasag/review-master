@@ -14,6 +14,8 @@ const {
   addItem,
   updateItem,
   deleteItem,
+  updateScreenshot,
+  reorderScreenshots,
   reorderItems,
   startReview,
   finishPlanning,
@@ -121,6 +123,21 @@ async function handleDeleteScreenshot(id: string) {
   await refresh()
 }
 
+async function handleUpdateScreenshot(id: string, notes: string | null) {
+  await updateScreenshot(id, { notes })
+}
+
+async function handleReorderScreenshots(ids: string[]) {
+  if (!selectedId.value) return
+  await reorderScreenshots(selectedId.value, ids)
+}
+
+async function handleDeleteItem() {
+  if (!selectedId.value) return
+  await deleteItem(selectedId.value)
+  selectedId.value = null
+}
+
 async function handleStartReview() {
   if (!review.value || !review.value.items.length || !canStartReview.value) return
   starting.value = true
@@ -215,7 +232,7 @@ function reviewTitle(r: { name: string; sprint: string; team?: string }) {
             <span class="chip chip-neutral">Sprint {{ review.sprint }}</span>
             <span class="chip chip-neutral">{{ selectedStatusLabel }}</span>
             <span v-if="review.team" style="color:var(--fg-subtle)">{{ review.team }}</span>
-            <span style="color:var(--fg-subtle)">{{ formatGermanDate(review.created_at) }}</span>
+            <span style="color:var(--fg-subtle)">{{ formatGermanDate(review.review_date ?? review.created_at) }}</span>
           </div>
         </div>
         <div class="plan-head-actions">
@@ -319,6 +336,9 @@ function reviewTitle(r: { name: string; sprint: string; team?: string }) {
         @update="handleUpdate"
         @upload-screenshot="handleUploadScreenshot"
         @delete-screenshot="handleDeleteScreenshot"
+        @update-screenshot="handleUpdateScreenshot"
+        @reorder-screenshots="handleReorderScreenshots"
+        @delete-item="handleDeleteItem"
       />
     </div>
     <div v-else class="plan-detail" style="display:flex;align-items:center;justify-content:center;">

@@ -9,6 +9,7 @@ export interface Review {
   started_at: number | null
   completed_at: number | null
   duration_ms: number | null
+  review_date: number | null
 }
 
 export interface ReviewItem {
@@ -33,6 +34,7 @@ export interface Screenshot {
   mime_type: string
   size_bytes: number
   order_index: number
+  notes: string | null
   created_at: number
 }
 

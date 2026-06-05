@@ -1,14 +1,43 @@
 <script setup lang="ts">
-import type { ReviewItemWithMedia } from '~/server/types/db'
+import type { ReviewItemWithMedia, Screenshot } from '~/server/types/db'
 
 const props = defineProps<{ item: ReviewItemWithMedia }>()
 const emit = defineEmits<{
   update: [payload: Partial<ReviewItemWithMedia>]
   uploadScreenshot: [file: File]
   deleteScreenshot: [id: string]
+  updateScreenshot: [id: string, notes: string | null]
+  reorderScreenshots: [ids: string[]]
+  deleteItem: []
 }>()
 
 const fileInput = useTemplateRef<HTMLInputElement>('fileInput')
+const confirmingDelete = ref(false)
+
+const screenshotNotes = ref<Record<string, string>>({})
+
+function initNotes(screenshots: Screenshot[]) {
+  for (const s of screenshots) {
+    if (!(s.id in screenshotNotes.value)) {
+      screenshotNotes.value[s.id] = s.notes ?? ''
+    }
+  }
+}
+
+watch(() => props.item.screenshots, (shots) => {
+  initNotes(shots)
+}, { immediate: true })
+
+function saveNotes(id: string) {
+  const value = screenshotNotes.value[id] ?? ''
+  emit('updateScreenshot', id, value || null)
+}
+
+const screenshotsRef = computed(() => props.item.screenshots)
+const { onDragStart: onShotDragStart, onDragOver: onShotDragOver, onDrop: onShotDrop, onDragEnd: onShotDragEnd, draggingId: draggingShotId } = useDragReorder(
+  screenshotsRef as unknown as Ref<any[]>,
+  (ids) => emit('reorderScreenshots', ids),
+)
 
 const issueId = ref(props.item.issue_id)
 const title = ref(props.item.title)
@@ -137,24 +166,46 @@ function showTagInputFn() {
           <span class="eyebrow">Screenshots</span>
           <span class="field-help">⌘V to paste</span>
         </div>
-        <div class="shots-grid">
+        <div class="shot-list">
           <div
-            v-for="shot in item.screenshots"
+            v-for="(shot, idx) in item.screenshots"
             :key="shot.id"
-            class="shot"
+            class="shot-row"
+            :class="{ dragging: shot.id === draggingShotId }"
+            draggable="true"
+            @dragstart="onShotDragStart(shot.id)"
+            @dragover.prevent="(e: DragEvent) => onShotDragOver(e, idx)"
+            @drop.prevent="(e: DragEvent) => onShotDrop(e, idx)"
+            @dragend="onShotDragEnd"
           >
-            <img :src="`/api/screenshots/${shot.id}`" style="width:100%;height:100%;object-fit:cover;" :alt="shot.original_name" />
+            <div class="shot-grip">
+              <svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor">
+                <circle cx="3" cy="3" r="1.2"/><circle cx="7" cy="3" r="1.2"/>
+                <circle cx="3" cy="7" r="1.2"/><circle cx="7" cy="7" r="1.2"/>
+                <circle cx="3" cy="11" r="1.2"/><circle cx="7" cy="11" r="1.2"/>
+              </svg>
+            </div>
+            <img class="shot-thumb" :src="`/api/screenshots/${shot.id}`" :alt="shot.original_name" />
+            <textarea
+              class="shot-notes rm-textarea"
+              :value="screenshotNotes[shot.id] ?? ''"
+              placeholder="Notes for this screenshot..."
+              rows="2"
+              @input="screenshotNotes[shot.id] = ($event.target as HTMLTextAreaElement).value"
+              @blur="saveNotes(shot.id)"
+            />
             <button class="shot-delete" @click="emit('deleteScreenshot', shot.id)">
               <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
                 <path d="M2 2l6 6M8 2l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
               </svg>
             </button>
           </div>
-          <div class="shot add" @click="fileInput?.click()">
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-              <path d="M9 3v12M3 9h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-            </svg>
-          </div>
+        </div>
+        <div class="shot-add" @click="fileInput?.click()">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M7 2v10M2 7h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+          Add screenshot
         </div>
         <input ref="fileInput" type="file" accept="image/png,image/jpeg,image/webp" style="display:none" @change="onFileSelected" />
       </div>
@@ -222,6 +273,20 @@ function showTagInputFn() {
         </div>
       </div>
 
+      <!-- Remove item -->
+      <div class="field">
+        <div v-if="!confirmingDelete">
+          <button class="rm-btn rm-btn-ghost" style="color:var(--coral-50);font-size:var(--text-xs);" @click="confirmingDelete = true">
+            Remove item
+          </button>
+        </div>
+        <div v-else class="delete-confirm-row">
+          <span style="font-size:var(--text-xs);color:var(--fg-muted);">Remove this item?</span>
+          <button class="rm-btn rm-btn-ghost" style="font-size:var(--text-xs);" @click="confirmingDelete = false">Cancel</button>
+          <button class="rm-btn rm-btn-ghost" style="color:var(--coral-50);font-size:var(--text-xs);" @click="emit('deleteItem')">Confirm</button>
+        </div>
+      </div>
+
       <!-- Tags -->
       <div class="field">
         <div class="field-label">
@@ -258,3 +323,75 @@ function showTagInputFn() {
     </div>
   </div>
 </template>
+
+<style scoped>
+.delete-confirm-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.shot-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.shot-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-surface);
+  cursor: grab;
+}
+
+.shot-row.dragging {
+  opacity: 0.4;
+}
+
+.shot-grip {
+  display: flex;
+  align-items: center;
+  padding: 4px 2px;
+  color: var(--fg-disabled);
+  cursor: grab;
+  flex-shrink: 0;
+}
+
+.shot-thumb {
+  width: 72px;
+  height: 54px;
+  object-fit: cover;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.shot-notes {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--text-xs);
+  resize: none;
+}
+
+.shot-add {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  color: var(--fg-muted);
+  cursor: pointer;
+  font-size: var(--text-xs);
+  background: transparent;
+}
+
+.shot-add:hover {
+  border-color: var(--brand);
+  color: var(--fg);
+}
+</style>

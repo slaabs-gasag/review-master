@@ -57,6 +57,15 @@ const filtered = computed(() =>
     : sortedCompleted.value
 )
 
+// Q&A modal
+const qaTarget = ref<ReviewWithItems | null>(null)
+const qaOpen = ref(false)
+
+function openQaModal(review: ReviewWithItems) {
+  qaTarget.value = review
+  qaOpen.value = true
+}
+
 // Delete
 const deleteTarget = ref<ReviewWithItems | null>(null)
 const deleteOpen = ref(false)
@@ -131,13 +140,32 @@ async function confirmDelete() {
           <NuxtLink :to="`/archive/${review.id}`" style="text-decoration:none;display:block;">
             <SprintCard :review="review" :featured="i === 0 && activeFilter === null" />
           </NuxtLink>
-          <button class="archive-delete-btn" title="Delete review" @click.stop="openDeleteModal(review)">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path d="M2 3.5h10M5.5 3.5V2.5h3v1M6 6v4M8 6v4M3 3.5l.7 7.5h6.6l.7-7.5H3z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </button>
+          <div class="archive-card-actions">
+            <button class="archive-qa-btn" title="View Q&A" @click="openQaModal(review)">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2"/>
+                <path d="M5.5 5.5c0-1 .67-1.5 1.5-1.5s1.5.67 1.5 1.5c0 .67-.5 1.17-1 1.33V8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                <circle cx="7" cy="9.5" r=".6" fill="currentColor"/>
+              </svg>
+              Q&A
+            </button>
+            <button class="archive-delete-btn" title="Delete review" @click="openDeleteModal(review)">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <path d="M2 3.5h10M5.5 3.5V2.5h3v1M6 6v4M8 6v4M3 3.5l.7 7.5h6.6l.7-7.5H3z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Delete
+            </button>
+            <NuxtLink :to="`/archive/${review.id}`" class="archive-rewatch-btn">Re-watch →</NuxtLink>
+          </div>
         </div>
       </div>
+
+      <QaViewModal
+        :open="qaOpen"
+        :review-id="qaTarget?.id ?? null"
+        :review-name="qaTarget?.name ?? null"
+        @close="qaOpen = false"
+      />
 
       <DeleteReviewModal
         v-model:open="deleteOpen"

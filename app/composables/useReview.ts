@@ -79,6 +79,16 @@ export function useCurrentReview() {
     await refresh()
   }
 
+  async function updateScreenshot(id: string, payload: { notes: string | null }) {
+    await $fetch(`/api/screenshots/${id}`, { method: 'PUT', body: payload })
+    await refresh()
+  }
+
+  async function reorderScreenshots(itemId: string, order: string[]) {
+    await $fetch(`/api/items/${itemId}/screenshots/reorder`, { method: 'PUT', body: { order } })
+    await refresh()
+  }
+
   async function reorderItems(order: string[]) {
     if (!review.value) return
     await $fetch(`/api/reviews/${review.value.id}/items/reorder`, { method: 'PUT', body: { order } })
@@ -111,6 +121,8 @@ export function useCurrentReview() {
     addItem,
     updateItem,
     deleteItem,
+    updateScreenshot,
+    reorderScreenshots,
     reorderItems,
     startReview,
     finishPlanning,

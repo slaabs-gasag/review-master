@@ -72,6 +72,20 @@ export function getDb(): Database.Database {
     CREATE INDEX IF NOT EXISTS idx_reviews_status ON reviews(status, created_at);
   `)
 
+  const hasNotes = (_db.prepare(
+    "SELECT COUNT(*) as c FROM pragma_table_info('screenshots') WHERE name='notes'"
+  ).get() as { c: number }).c > 0
+  if (!hasNotes) {
+    _db.exec("ALTER TABLE screenshots ADD COLUMN notes TEXT DEFAULT NULL")
+  }
+
+  const hasReviewDate = (_db.prepare(
+    "SELECT COUNT(*) as c FROM pragma_table_info('reviews') WHERE name='review_date'"
+  ).get() as { c: number }).c > 0
+  if (!hasReviewDate) {
+    _db.exec("ALTER TABLE reviews ADD COLUMN review_date INTEGER DEFAULT NULL")
+  }
+
   return _db
 }
 

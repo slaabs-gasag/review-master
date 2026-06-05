@@ -14,7 +14,7 @@ const props = defineProps<{
 const items = computed(() => props.review?.items ?? [])
 const itemCount = computed(() => items.value.length)
 const itemCountLabel = computed(() => `${itemCount.value} ${itemCount.value === 1 ? 'Item' : 'Items'}`)
-const reviewDate = computed(() => formatGermanDate(props.review?.started_at ?? props.review?.created_at))
+const reviewDate = computed(() => formatGermanDate(props.review?.review_date ?? props.review?.started_at ?? props.review?.created_at))
 
 const shot = computed(() => {
   if (props.screenshotIndex === undefined || !props.item) return null
@@ -82,6 +82,9 @@ const shot = computed(() => {
           style="object-fit: contain;"
           :alt="shot.original_name"
         />
+        <div v-if="shot.notes" class="present-shot-notes">
+          {{ shot.notes }}
+        </div>
       </template>
       <template v-else-if="item">
         <div class="present-intro">
@@ -111,3 +114,20 @@ const shot = computed(() => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.present-shot-notes {
+  position: absolute;
+  bottom: 72px;
+  left: 0;
+  right: 0;
+  padding: 12px 20px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 14px;
+  line-height: 1.5;
+  backdrop-filter: blur(4px);
+  white-space: pre-wrap;
+  z-index: 11;
+}
+</style>
