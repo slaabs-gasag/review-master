@@ -23,6 +23,9 @@ const selectedItemId = ref<string | null>(null)
 const starting = ref(false)
 const finishing = ref(false)
 const addError = ref('')
+const deleteOpen = ref(false)
+const deleteError = ref<string | null>(null)
+const deleteLoading = ref(false)
 
 const selectedId = computed({
   get() {
@@ -59,6 +62,10 @@ const selectedStatusLabel = computed(() => {
 
 const canStartReview = computed(() =>
   review.value?.status === 'plan_finished' || review.value?.status === 'active'
+)
+
+const canDeleteReview = computed(() =>
+  review.value?.status === 'planned' || review.value?.status === 'plan_finished'
 )
 
 const primaryActionLabel = computed(() => {
@@ -142,6 +149,36 @@ async function handlePrimaryAction() {
   await handleStartReview()
 }
 
+function openDeleteModal() {
+  deleteError.value = null
+  deleteOpen.value = true
+}
+
+async function confirmDeleteReview() {
+  if (!review.value || !canDeleteReview.value) return
+
+  const reviewId = review.value.id
+  const nextReview = planReviews.value.find(r => r.id !== reviewId)
+
+  deleteLoading.value = true
+  deleteError.value = null
+  try {
+    await $fetch(`/api/reviews/${reviewId}`, { method: 'DELETE' })
+    selectedItemId.value = null
+    deleteOpen.value = false
+    await refresh()
+    if (nextReview) {
+      await selectReview(nextReview.id)
+    }
+  }
+  catch {
+    deleteError.value = 'Deletion failed. Please try again.'
+  }
+  finally {
+    deleteLoading.value = false
+  }
+}
+
 async function handleReorder(ids: string[]) {
   await reorderItems(ids)
 }
@@ -182,6 +219,14 @@ function reviewTitle(r: { name: string; sprint: string; team?: string }) {
           </div>
         </div>
         <div class="plan-head-actions">
+          <button
+            v-if="canDeleteReview"
+            class="rm-btn rm-btn-ghost"
+            style="font-size:var(--text-xs);color:var(--fg-subtle);"
+            @click="openDeleteModal"
+          >
+            Delete
+          </button>
           <NuxtLink to="/reviews/new" class="rm-btn rm-btn-ghost" style="font-size:var(--text-xs);">
             + New review
           </NuxtLink>
@@ -280,6 +325,14 @@ function reviewTitle(r: { name: string; sprint: string; team?: string }) {
       <p style="color:var(--fg-disabled);font-size:var(--text-sm);">Select an item to edit</p>
     </div>
   </div>
+
+  <DeleteReviewModal
+    v-model:open="deleteOpen"
+    :review-name="review?.name"
+    :loading="deleteLoading"
+    :error="deleteError"
+    @confirm="confirmDeleteReview"
+  />
 </template>
 
 <style scoped>
